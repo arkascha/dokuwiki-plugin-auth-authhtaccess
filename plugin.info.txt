@@ -1,0 +1,7 @@
+base   authhtaccess
+author Christian Reiner
+email  info@christian-reiner.info
+date   2016-02-21
+name   HtAccess Auth Plugin
+desc   Provides user authentication based on Apache htaccess style files
+url
