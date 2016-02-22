@@ -1,30 +1,18 @@
-This is yet another authentication class for dokuwiki that uses the htaccess controls often found in simple apache and other web servers.
-It is easy to set up and is suitable for a relatively small number of users/groups.
-
-It is fully compatible with the usermanager plugin, update profile, register, logout (in dokuwiki version 2006-03-09b and 2006-11-06)
-
+This is yet another authentication plugin for dokuwiki that uses the apache .htaccess style control files.
+It is easy to set up since no external authority is involved and is suitable only for a relatively small number of users/groups.
 It is particularly useful where you want to share user/group information with other web applications that use a similar mechanism.
 
-The htaccess class finds and reads a ".htaccess" file and will use the AuthUserFile and AuthGroupFile directives to point to the list of users and groups respectively. A 3rd, non-standard, file "htuser" is used to store the fullname and the email address required by dokuwiki. By default this will be a file called "htuser" in the same directory as the AuthUserFile. 
-
-==== Installation ====
-Unpack the [[http://lastweekend.com.au/htauth-1.01.zip|htauth-1.01.zip]] in your dokuwiki/inc/auth folder. 
-
-=== PHP4 ===
-The files use some PHP5 OO features (private,protected,abstract modifiers).
-If you are using PHP4 you'll need to apply the supplied patch. <code> patch < htauth-php4.patch </code>
-
 ==== Configuration ====
-local.php options.
+conf/dokuwiki.php options.
 <code php>
-$conf['authtype']     = 'htaccess';
-$conf['htaccess_defaultgrp'] = "guest"; //optional. All valid users will be members of this group.
+$conf['authtype'] = 'htaccess';
+$conf['htaccess_defaultgrp'] = 'guest'; //optional. All valid users will be members of this group.
 
 //Optional path to htaccess configuration. Blank or not included will autodiscover a ".htaccess" file like Apache does.
 //This is useful where you are not using BASIC authentication but still want to use these formats for user/password/group info.
-//$conf['htaccess_file'] = "conf/htauth";
+//$conf['htaccess_file'] = 'conf/htauth';
 
-$conf['htaccess_htuser'] = "htuser"; //Name of htuser file. If no path specified will be in same directory as AuthUserFile.
+$conf['htaccess_htuser'] = 'htuser'; //Name of htuser file. If no path specified will be in same directory as AuthUserFile.
 $conf['autopasswd'] = 1;  //set to zero if you want to specify passwords to users. 
 $conf['openregister']= 0; //open register won't work behind basic auth
 $conf['resendpasswd']= 0; //also won't work behind basic auth
@@ -53,21 +41,21 @@ These files must be writable by your webserver user if you want to add new users
 
 === Using Dokuwiki's form based login ===
 
-This backend will also work with dokuwiki's normal login page by setting $conf['htaccess_file'] to point to a different file that has the same format as above but is not the one used to control the webserver. In this case the only relevant directives are AuthUserfile and AuthGroupFile.
+This backend will also work with dokuwiki's normal login page by setting $conf['htaccess_file'] to point to a different file that has the same format as above but is not the one used to control the webserver. In this case the only relevant directives are AuthUserfile and AuthGroupFile. In fact the AuthName setting must not be used in this case, since it forces a http basic authentication upon logout.
 
 You will lose single sign-on capability between applications but things like openregister and resendpasswd will work as dokuwiki intends.
 
 ==== Development info ====
-^Class^Description^
-|htaccess.class.php|Implements the dokuwiki authentication, auto discovers .htaccess etc..|`
-|htbase.class.php|Basic layout for managing a data file|
-|htpasswd.class.php|Manages an AuthUserFile (htpasswd)- format <user>:<crypt password>|
-|htgroup.class.php|Manages an AuthGroupFile - format <group>:<user1> <user2> <user3>|
-|htuser.class.php|Manages file for storing full name and email address - format "<user>:<name>:<email>"|
+^File^Class^Description^
+|auth.php|auth_plugin_authhtaccess|Implements the dokuwiki authentication, auto discovers .htaccess etc..|`
+|htbase.php|auth_plugin_authhtaccess_htbase|Basic layout for managing a data file|
+|htpasswd.php|auth_plugin_authhtaccess_htpasswd|Manages an AuthUserFile (htpasswd)- format <user>:<crypt password>|
+|htgroup.php|auth_plugin_authhtaccess_htgroup|Manages an AuthGroupFile - format <group>:<user1> <user2> <user3>|
+|htuser.php|auth_plugin_authhtaccess_htuser|Manages file for storing full name and email address - format "<user>:<name>:<email>"|
 
 If $_SERVER['PHP_AUTH_USER'] and $_SERVER['PHP_AUTH_PW'] are set, indicating BASIC authentication are in place then the class is deemed to support "trustExternal" and will re-verify the username and password based on these parameters. Otherwise the normal dokuwiki login page method will be used.
 
-==Locking==
+== Locking ==
 flock is used on the .htaccess file itself whenever the other files need to be read or written to. Should be safe as long as nothing else is updating these files.
 
 ==== TODO ====
@@ -76,13 +64,12 @@ flock is used on the .htaccess file itself whenever the other files need to be r
   * Test on non Linux OS
   * Allow the "htuser" file to be optional (only makes sense if autopasswd is off because otherwise email is necessary for registering users)
 
-
- --- //[[grant@lastweekend.com.au|Grant Gardner]] 2006-09-06 14:59//
-
 ==== Release Notes ====
 
-===1.01===
+=== 1.01 (Grant Gardner) ===
   * Fixed bug where deleting users would leave their groups behind
   * Fixed incorrect case-sensitive matching of values in .htaccess files
   * Allow configuration of htaccess file location to bypass .htaccess auto-discovery
-
+=== 2.00 (Christian Reiner) ===
+  * Ported implementation to the current plugin based authentication strategy used in dokuwiki since version 2014-09-29
+  * A number of fixes and corrections, but no consequent cleanup
