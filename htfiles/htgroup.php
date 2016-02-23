@@ -1,33 +1,52 @@
 <?php
- 
+
+/**
+ * Class auth_plugin_authhtaccess_htgroup
+ */
 class auth_plugin_authhtaccess_htgroup extends auth_plugin_authhtaccess_htbase
 {
-
+    /** @var array user groups */
     private $groups = array();
-
+    /** @var array users */
     private $users = array();
+    /** @var string default group */
+    private $defaultGroup;
 
-    private $defGrp;
-
-    public function __construct($file = '', $defGrp = null) {
-        if (isset($defGrp)) {
-            $this->defGrp = trim($defGrp);
+    /**
+     * auth_plugin_authhtaccess_htgroup constructor.
+     * @param string $file
+     * @param null $defaultGroup
+     */
+    public function __construct($file = '', $defaultGroup = null) {
+        if (isset($defaultGroup)) {
+            $this->defaultGroup = trim($defaultGroup);
         }
         parent::__construct($file);
     }
 
+    /**
+     * @return array
+     */
     public function getGroupsByUser() {
         return $this->users;
     }
 
+    /**
+     * @param $user
+     * @return bool
+     */
     public function getGroupsForUser($user) {
         return isset ($this->users[$user]) ? $this->users[$user] : false;
     }
 
+    /**
+     * @param $user
+     * @param $groups
+     * @return bool
+     */
     public function setGroupsForUser($user, $groups) {
-
-        if (isset($this->defGrp) && !in_array($this->defGrp, $groups)) {
-            $groups = array_merge(array($this->defGrp), $groups);
+        if (isset($this->defaultGroup) && !in_array($this->defaultGroup, $groups)) {
+            $groups = array_merge(array($this->defaultGroup), $groups);
         }
 
         $this->users[$user] = $groups;
@@ -36,6 +55,11 @@ class auth_plugin_authhtaccess_htgroup extends auth_plugin_authhtaccess_htbase
         return $this->writeFile();
     }
 
+    /**
+     * @param $user
+     * @param bool $writeFile
+     * @return bool
+     */
     public function delete($user, $writeFile = true) {
         if (!is_array($user)) {
             if (isset($this->users[$user])) {
@@ -55,7 +79,9 @@ class auth_plugin_authhtaccess_htgroup extends auth_plugin_authhtaccess_htbase
         return true;
     }
 
-    //reset groups array from users array. Will delete group
+    /**
+     * @brief Reset groups array from users array. Will delete group.
+     */
     private function resetGroups() {
         $this->groups = array();
         foreach ($this->users as $user => $groups) {
@@ -65,6 +91,9 @@ class auth_plugin_authhtaccess_htgroup extends auth_plugin_authhtaccess_htbase
         }
     }
 
+    /**
+     * @brief Load file from disk.
+     */
     protected function loadFile() {
         $this->groups = array();
         $this->users = array();
@@ -83,14 +112,14 @@ class auth_plugin_authhtaccess_htgroup extends auth_plugin_authhtaccess_htbase
             $group = trim($row[0]);
             if (empty($group)) continue;
 
-            if ($group == $this->defGrp) continue;
+            if ($group == $this->defaultGroup) continue;
 
             $users_in_group = preg_split("'\s'", $row[1]);
             foreach ($users_in_group as $user) {
                 if (empty ($user)) continue;
 
-                if (isset($this->defGrp) && !array_key_exists($user, $this->users)) {
-                    $this->users[$user][] = $this->defGrp;
+                if (isset($this->defaultGroup) && !array_key_exists($user, $this->users)) {
+                    $this->users[$user][] = $this->defaultGroup;
                 }
 
                 $this->groups[$group][] = $user;
@@ -99,6 +128,10 @@ class auth_plugin_authhtaccess_htgroup extends auth_plugin_authhtaccess_htbase
         }
     }
 
+    /**
+     * @brief Write file to disk.
+     * @return bool
+     */
     protected function writeFile() {
         if (!$this->htFile()) {
             return false;
@@ -107,7 +140,7 @@ class auth_plugin_authhtaccess_htgroup extends auth_plugin_authhtaccess_htbase
         $fd = fopen($this->htFile(), 'w');
 
         foreach ($this->groups as $group => $users) {
-            if ($group == $this->defGrp) continue;
+            if ($group == $this->defaultGroup) continue;
 
             fwrite($fd, "$group:");
             foreach($users as $user) {

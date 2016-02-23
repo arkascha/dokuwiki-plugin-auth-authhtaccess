@@ -1,29 +1,49 @@
 <?php
 
+/**
+ * Class auth_plugin_authhtaccess_htpasswd
+ */
 class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
 {
-    private $users = null; //Array of [$userId]=cryptpass
+    /** @var array known users as associative array, userId as key, cryptpass as value */
+    private $users = null;
 
+    /**
+     * auth_plugin_authhtaccess_htpasswd constructor.
+     * @param string $file
+     */
     public function __construct($file = '') {
         parent::__construct($file);
     }
 
+    /**
+     * @return array
+     */
     public function getUsers() {
         return $this->users;
     }
 
+    /**
+     * @param $user
+     * @return bool
+     */
     public function isUser($user) {
         return array_key_exists($user,$this->users);
     }
 
-    public function verifyUser($UserID, $clearPass) {
-        if (empty($UserID)) {
+    /**
+     * @param string $userId
+     * @param string $clearPass
+     * @return bool
+     */
+    public function verifyUser($userId, $clearPass) {
+        if (empty($userId)) {
             return false;
         }
         if (empty($clearPass)) {
             return false;
         }
-        $pass = $this->users[$UserID];
+        $pass = $this->users[$userId];
         $salt = substr($pass, 0, 2);
         $cryptPass = $this->cryptPass($clearPass, $salt);
 
@@ -34,13 +54,18 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
         return false;
     }
 
-    public function changePass ($UserID, $newPass, $oldPass = '') {
-
-        if (empty($UserID)) {
+    /**
+     * @param string $userId
+     * @param string $newPass
+     * @param string $oldPass
+     * @return bool
+     */
+    public function changePass ($userId, $newPass, $oldPass = '') {
+        if (empty($userId)) {
             return false;
         }
 
-        if (!($this->isUser($UserID))) {
+        if (!($this->isUser($userId))) {
             return false;
         }
 
@@ -49,17 +74,17 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
             return false;
         }
 
-        $checkname = strtolower($UserID);
-        $checkpass = strtolower($newPass);
+        $checkName = strtolower($userId);
+        $checkPass = strtolower($newPass);
 
-        if($checkname == $checkpass) {
+        if($checkName == $checkPass) {
             $this->error("changePass failure: UserID and password cannot be the same", 0);
             return false;
         }
 
         if(!(empty($oldPass))) {
-            if (!($this->verifyUser($UserID,$oldPass))) {
-                $this->error("changePass failure for [$UserID] : Authentication Failed", 0);
+            if (!($this->verifyUser($userId,$oldPass))) {
+                $this->error("changePass failure for [$userId] : Authentication Failed", 0);
                 return false;
             }
 
@@ -69,24 +94,30 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
             }
         }
 
-        $this->users[$UserID] = $this->cryptPass($newPass);
+        $this->users[$userId] = $this->cryptPass($newPass);
 
         return $this->writeFile();
     }
 
-    public function renameUser ($OldID, $NewID, $writeFile = true) {
-        if (!$this->isUser($OldID)) {
-            $this->error("Cannot change userid, [$OldID] does not exist", 0);
+    /**
+     * @param string $oldId
+     * @param string $newId
+     * @param bool $writeFile
+     * @return bool
+     */
+    public function renameUser ($oldId, $newId, $writeFile = true) {
+        if (!$this->isUser($oldId)) {
+            $this->error("Cannot change userid, [$oldId] does not exist", 0);
         }
 
-        if ($this->isUser($NewID)) {
-            $this->error("Cannot change UserID, [$NewID] already exists", 0);
+        if ($this->isUser($newId)) {
+            $this->error("Cannot change UserID, [$newId] already exists", 0);
             return false;
         }
 
-        $oldCrypt = $this->users[$OldID];
-        unset($this->users[$OldID]);
-        $this->users[$NewID] = $oldCrypt;
+        $oldCrypt = $this->users[$oldId];
+        unset($this->users[$oldId]);
+        $this->users[$newId] = $oldCrypt;
 
         if ($writeFile) {
             return $this->writeFile();
@@ -95,9 +126,14 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
         return true;
     }
 
-    public function addUser ($UserID, $newPass, $writeFile = true) {
-
-        if (empty($UserID)) {
+    /**
+     * @param string $userId
+     * @param string $newPass
+     * @param bool $writeFile
+     * @return bool
+     */
+    public function addUser ($userId, $newPass, $writeFile = true) {
+        if (empty($userId)) {
             $this->error("addUser fail. No UserID", 0);
             return false;
         }
@@ -106,24 +142,29 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
             return false;
         }
 
-        if ($this->isUser($UserID)) {
+        if ($this->isUser($userId)) {
             $this->error("addUser fail. UserID already exists", 0);
             return false;
         }
 
-        $this->users[$UserID] = $this->cryptPass($newPass);
+        $this->users[$userId] = $this->cryptPass($newPass);
 
         if ($writeFile) {
             if(!($this->writeFile())) {
                 $this->error("FATAL could not add user due to file error! [$php_errormsg]", 1);
-                exit; // Just in case
+                exit; // just in case
             }
         }
-        // Successfully added user
 
+        // successfully added user
         return true;
     }
 
+    /**
+     * @param mixed $users
+     * @param bool $writeFile
+     * @return bool
+     */
     public function delete($users, $writeFile = true) {
         if (!is_array($users)) {
             $users = array($users);
@@ -142,8 +183,11 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
         }
 
         return $this->writeFile();
-    } 
+    }
 
+    /**
+     * @brief Load and interpret file from disk.
+     */
     protected function loadFile() {
         $this->users = array();
 
@@ -168,8 +212,10 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
         }
     }
 
+    /**
+     * @return bool
+     */
     protected function writeFile() {
-
         if (!$this->htFile()) {
             return false;
         }
@@ -185,6 +231,11 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
         return true;
     }
 
+    /**
+     * @param string $passwd
+     * @param string $salt
+     * @return string
+     */
     private function cryptPass($passwd, $salt = '') {
         if (!($passwd)) {
             return '';
@@ -199,6 +250,9 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
         return (crypt($passwd, $salt));
     }
 
+    /**
+     * @return string
+     */
     private function genSalt() {
         $random = 0;
         $rand64 = '';

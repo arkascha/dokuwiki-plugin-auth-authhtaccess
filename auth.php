@@ -16,46 +16,47 @@ if(!defined('DOKU_INC')) die();
  * TODO  Use special empty instances of the htclasses if they don't exist
  * 
  * @license    GPL 2 (http://www.gnu.org/licenses/gpl.html)
- * @author	   Grant Gardner <grant@lastweekend.com.au>
- * Version:    0.1
+ * @author     Christian Reiner <info@christian-reiner.info>
+ * Version:    2.0
  *
  * Work based on previous authentication backends by:
  * @author     Samuele Tognini <samuele@cli.di.unipi.it>
  * @author     Andreas Gohr <andi@splitbrain.org>
  * @author     Chris Smith <chris@jalakai.co.uk>
- * @author     Marcel Meulemans <marcel_AT_meulemans_DOT_org>
+ * @author     Marcel Meulemans <marcel@meulemans.org>
+ * @author     Grant Gardner <grant@lastweekend.com.au>
  * Additions:  Sebastian S <Seb.S@web.expr42.net>
  * 
  */
 
-define('DOKU_AUTH', dirname(__FILE__));
 require_once DOKU_PLUGIN . 'authhtaccess/htfiles/htbase.php';
 require_once DOKU_PLUGIN . 'authhtaccess/htfiles/htpasswd.php';
 require_once DOKU_PLUGIN . 'authhtaccess/htfiles/htgroup.php';
 require_once DOKU_PLUGIN . 'authhtaccess/htfiles/htuser.php';
 
+/**
+ * Class auth_plugin_authhtaccess
+ */
 class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
 {
-
     /** @var array user cache */
     protected $users = null;
-
+    /** @var int lock file handle */
     protected $lockFile = null;
-
+    /** @var array filter pattern */
+    protected $_pattern = array();
+    /** @var auth_plugin_authhtaccess_htpasswd */
     protected $htpasswd;
-
+    /** @var auth_plugin_authhtaccess_htgroup */
     protected $htgroup;
-
+    /** @var auth_plugin_authhtaccess_htuser */
     protected $htuser;
-
+    /** @var string|null http realm  */
     protected $realm = null;
 
-    /** @var array filter pattern */
-    protected $_pattern = array ();
-
     /**
-     * Constructor
-     * Check config, .htaccess and set capabilities
+     * auth_plugin_authhtaccess constructor.
+     * @brief Check config, read .htaccess and set capabilities.
      */
     public function __construct() {
         parent::__construct();
@@ -104,23 +105,21 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
     }
 
     /**
-     *
+     * @param string $user user name
+     * @param string $pass cleartext password
+     * @param bool $sticky cookie should not expire
+     * @return bool true on successful auth
      * @see auth_login()
-     *
-     * @param   string  $user    Username
-     * @param   string  $pass    Cleartext Password
-     * @param   bool    $sticky  Cookie should not expire
-     * @return  bool             true on successful auth
      */
     public function trustExternal($user, $pass, $sticky = false) {
         global $USERINFO;
         global $conf;
 
-        // Never use $user, $pass as user will never arrive via login page.
+        // never use $user, $pass as user will never arrive via login page.
         $user = $_SERVER['PHP_AUTH_USER'];
         $pass = $_SERVER['PHP_AUTH_PW'];
 
-        //Possibly could trust those headers, but why bother!
+        // possibly could trust those headers, but why bother!
         if (! $this->htpasswd->verifyUser($user, $pass)) {
             return false;
         }
@@ -139,24 +138,26 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
         return true;
     }
 
+    /**
+     * @brief Http logoff in case a realm is set, forces a http basic authentication.
+     */
     public function logOff() {
         global $conf;
         //works only with basic http authentication on some browsers!.
         //Don't try logging in again, must hit cancel
         if (isset ($this->realm)) {
-            $default_msg = "Successful logout. Retry login <a href='" . DOKU_BASE . "'>here</a>.";
+            $defaultMsg = "Successful logout. Retry login <a href='" . DOKU_BASE . "'>here</a>.";
             header('WWW-Authenticate: Basic realm="' . $this->realm . '"');
             header('HTTP/1.0 401 Unauthorized');
-            isset ($conf['htaccess_logout']) ? print($conf['htaccess_logout']) : print($default_msg);
+            isset ($conf['htaccess_logout']) ? print($conf['htaccess_logout']) : print($defaultMsg);
             exit;
         }
     }
 
     /**
-     * Check user+password, if using the login page
-     * or update profile form
-     *
-     * @author  Andreas Gohr <andi@splitbrain.org>
+     * @brief Check user and password, if using the login page or update profile form.
+     * @param string $user user name
+     * @param string $pass clear text password
      * @return  bool
      */
     public function checkPass($user, $pass) {
@@ -164,9 +165,12 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
     }
   
    /**
-    * Return user info
+    * @brief Return user info.
+    * @param string $user user name
+    * @param bool $htDefaultGroup
+    * @return bool
     */
-    public function getUserData($user, $ht_defaultgrp = true) {
+    public function getUserData($user, $htDefaultGroup = true) {
         global $conf;
 
         if ($this->users === null) {
@@ -176,6 +180,10 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
         return isset ($this->users[$user]) ? $this->users[$user] : false;
     }
 
+    /**
+     * @param array $filter
+     * @return int
+     */
     public function getUserCount($filter = array()) {
         if ($this->users === null) {
             $this->loadUserData();
@@ -195,6 +203,12 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
         return $count;
     }
 
+    /**
+     * @param int $start
+     * @param int $limit
+     * @param array $filter
+     * @return array
+     */
     public function retrieveUsers($start = 0, $limit = 0, $filter = array()) {
         if ($this->users === null) {
             $this->loadUserData();
@@ -218,9 +232,18 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
                 $i++;
             }
         }
+
         return $out;
     }
 
+    /**
+     * @param string $user
+     * @param string $pwd
+     * @param string $name
+     * @param string $mail
+     * @param null $grps
+     * @return bool
+     */
     public function createUser($user, $pwd, $name, $mail, $grps = null) {
         global $conf;
 
@@ -243,6 +266,10 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
         return $addOK;
     }
 
+    /**
+     * @param array $users
+     * @return int
+     */
     public function deleteUsers($users) {
 
         $userCount = $this->getUserCount();
@@ -266,6 +293,11 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
         return ($userCount - $this->getUserCount());
     }
 
+    /**
+     * @param string $user
+     * @param array $changes
+     * @return bool
+     */
     public function modifyUser($user, $changes) {
 
         $lockfp = $this->lockWrite();
@@ -295,7 +327,6 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
                             $changes['grps'] = $oldGroups;
                     }
                 }
-
                 $user = $newUser;
             }
         }
@@ -315,6 +346,10 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
         return $modifyOK;
     }
 
+    /**
+     * @param string $user
+     * @return array
+     */
     private function defaultUserInfo($user) {
         global $conf;
 
@@ -323,13 +358,16 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
         $name = $user;
         $mail = $user."@localhost";
         $pass = "";
-        $userInfo = compact("name","mail","pass");
+        $userInfo = compact("name", "mail", "pass");
 
         $userInfo['grps'] = $defaultGroup ? array($defaultGroup) : array();
 
         return $userInfo;
     }
 
+    /**
+     * @brief Load user data.
+     */
     private function loadUserData() {
 
         $this->users = array();
@@ -348,7 +386,6 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
             $this->users[$user] = array_merge($this->users[$user], $userinfo);
         }
 
-
         $groupsByUser = $this->htgroup->getGroupsByUser();
         foreach ($groupsByUser as $user => $groups) {
 
@@ -360,10 +397,11 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
     }
 
     /**
-        * return 1 if $user + $info match $filter criteria, 0 otherwise
-        *
-        * @author   Chris Smith <chris@jalakai.co.uk>
-        */
+     * @brief Return 1 if $user + $info match $filter criteria, 0 otherwise.
+     * @param string $user
+     * @param array $info
+     * @return int
+     */
     private function filter($user, $info) {
 
         foreach ($this->_pattern as $item => $pattern) {
@@ -382,33 +420,37 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
         return 1;
     }
 
+    /**
+     * @param array $filter
+     */
     private function constructPattern($filter) {
         $this->_pattern = array();
         foreach ($filter as $item => $pattern) {
-            //        $this->_pattern[$item] = '/'.preg_quote($pattern,"/").'/';          // don't allow regex characters
+            //$this->_pattern[$item] = '/'.preg_quote($pattern,"/").'/'; // don't allow regex characters
             $this->_pattern[$item] = '/' . str_replace('/', '\/', $pattern) . '/'; // allow regex characters
         }
     }
 
+    /**
+     * @return bool
+     */
     private function findHtAccess() {
         global $conf;
 
         $htaccessFile = $conf['htaccess_file'];
 
         if (empty($htaccessFile)) {
-            $htaccess = realpath(DOKU_AUTH . '/../../');
+            $htaccess = realpath(dirname(__FILE__) . '/../../');
             //Stop at docroot or '/'
             while (!empty ($htaccess) && !file_exists($htaccess . '/.htaccess')) {
 
-                $parent_dir = dirname($htaccess);
-                if ($parent_dir == $htaccess) {
+                $parentDir = dirname($htaccess);
+                if ($parentDir == $htaccess) {
                     $htaccess = '';
                 } else {
                     $htaccess = dirname($htaccess);
                 }
-
             }
-
               $htaccessFile = $htaccess . "/.htaccess";
         }
 
@@ -449,7 +491,10 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
         return true;
     }
 
-
+    /**
+     * @param string $lockFile
+     * @return resource
+     */
     private function lockRead($lockFile) {
         $this->lockFile = $lockFile;
         $lockfp = fopen($lockFile, 'r');
@@ -457,12 +502,18 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
         return $lockfp;
     }
 
+    /**
+     * @return resource
+     */
     private function lockWrite() {
         $lockfp = fopen($this->lockFile, 'r');
         flock($lockfp, LOCK_EX) || die("Can't get lock");
         return $lockfp;
     }
 
+    /**
+     * @param $lockfp
+     */
     private function lockRelease($lockfp) {
         flock($lockfp, LOCK_UN);
     }

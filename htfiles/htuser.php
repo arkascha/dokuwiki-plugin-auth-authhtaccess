@@ -1,46 +1,77 @@
 <?php
 
+/**
+ * Class auth_plugin_authhtaccess_htuser
+ */
 class auth_plugin_authhtaccess_htuser extends auth_plugin_authhtaccess_htbase
 {
+    /** @var array associative array of known users ([$user][name|mail] = value) */
+    private $users = array();
 
-    private $users = array(); //Array = [$user][name|mail] = value
-
+    /**
+     * auth_plugin_authhtaccess_htuser constructor.
+     * @param string $file
+     */
     public function __construct($file = '') {
         parent::__construct($file);
     }
 
+    /**
+     * @return array
+     */
     public function getUsers() {
         return $this->users;
     }
 
+    /**
+     * @param string $user
+     * @return bool
+     */
     public function getUserInfo($user) {
         return isset ($this->users[$user]) ? $this->users[$user] : false;
     }
 
+    /**
+     * @param string $user
+     * @return bool
+     */
     public function isUser($user) {
         return isset($this->users[$user]);
     }
 
-    public function addUser ($UserID, $name, $mail, $writeFile = true) {
-
-        if(empty($UserID)) {
+    /**
+     * @param $userId
+     * @param $name
+     * @param $mail
+     * @param bool $writeFile
+     * @return bool
+     */
+    public function addUser ($userId, $name, $mail, $writeFile = true) {
+        if(empty($userId)) {
             $this->error("add htUser fail. No UserID", 0);
             return false;
         }
 
-        if($this->isUser($UserID)) {
+        if($this->isUser($userId)) {
             $this->error("add htUser fail. UserID already exists", 0);
             return false;
         }
 
-        $this->users[$UserID]['name'] = $name;
-        $this->users[$UserID]['mail'] = $mail;
+        $this->users[$userId]['name'] = $name;
+        $this->users[$userId]['mail'] = $mail;
 
         if ($writeFile) {
             return $this->writeFile();
         }
+
+        return true;
     }
 
+    /**
+     * @param mixed $users
+     * @param bool $writeFile
+     * @return bool
+     */
     public function delete($users, $writeFile = true) {
         if (!is_array($users)) {
             $users = array($users);
@@ -63,10 +94,15 @@ class auth_plugin_authhtaccess_htuser extends auth_plugin_authhtaccess_htbase
         }
 
         return true;
-    } 
+    }
 
+    /**
+     * @param string $user
+     * @param array $changes
+     * @param bool $writeFile
+     * @return bool
+     */
     public function modify($user, $changes, $writeFile = true) {
-
         if ($this->isUser($user)) {
             $changes = array_merge($this->users[$user], $changes);
         }
@@ -79,7 +115,10 @@ class auth_plugin_authhtaccess_htuser extends auth_plugin_authhtaccess_htbase
 
         return true;
     }
-    
+
+    /**
+     * @brief Load and parse file from disk.
+     */
     protected function loadFile() {
         $this->users = array();
 
@@ -90,7 +129,7 @@ class auth_plugin_authhtaccess_htuser extends auth_plugin_authhtaccess_htbase
         $lines = file($this->htFile());
 
         foreach ($lines as $line) {
-            $line = preg_replace('/#.*$/', '', $line); //ignore comments
+            $line = preg_replace('/#.*$/', '', $line); // ignore comments
             list($user, $name, $mail) = split(":", $line, 3);
             $user = trim($user);
             $name = trim($name);
@@ -102,6 +141,9 @@ class auth_plugin_authhtaccess_htuser extends auth_plugin_authhtaccess_htbase
         }
     }
 
+    /**
+     * @return bool
+     */
     protected function writeFile() {
         if (!$this->htFile()) {
             return false;
