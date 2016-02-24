@@ -60,8 +60,7 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
      */
     public function __construct() {
         parent::__construct();
-        global $conf;
-        $defaultGroup = $conf['htaccess_defaultgrp'];
+        $defaultGroup = $this->getConf('defaultgrp');
 
         $this->htpasswd = new auth_plugin_authhtaccess_htpasswd();
         $this->htuser = new auth_plugin_authhtaccess_htuser();
@@ -113,7 +112,6 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
      */
     public function trustExternal($user, $pass, $sticky = false) {
         global $USERINFO;
-        global $conf;
 
         // never use $user, $pass as user will never arrive via login page.
         $user = $_SERVER['PHP_AUTH_USER'];
@@ -131,9 +129,9 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
         $USERINFO['grps'] = $userInfo['grps'];
         $USERINFO['pass'] = $userInfo['pass'];
         $_SERVER['REMOTE_USER'] = $user;
-        $_SESSION[$conf['title']]['auth']['user'] = $user;
-        $_SESSION[$conf['title']]['auth']['pass'] = $pass;
-        $_SESSION[$conf['title']]['auth']['info'] = $USERINFO;
+        $_SESSION[$GLOBALS['conf']['title']]['auth']['user'] = $user;
+        $_SESSION[$GLOBALS['conf']['title']]['auth']['pass'] = $pass;
+        $_SESSION[$GLOBALS['conf']['title']]['auth']['info'] = $USERINFO;
 
         return true;
     }
@@ -142,14 +140,13 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
      * @brief Http logoff in case a realm is set, forces a http basic authentication.
      */
     public function logOff() {
-        global $conf;
         //works only with basic http authentication on some browsers!.
         //Don't try logging in again, must hit cancel
         if (isset ($this->realm)) {
-            $defaultMsg = "Successful logout. Retry login <a href='" . DOKU_BASE . "'>here</a>.";
             header('WWW-Authenticate: Basic realm="' . $this->realm . '"');
             header('HTTP/1.0 401 Unauthorized');
-            isset ($conf['htaccess_logout']) ? print($conf['htaccess_logout']) : print($defaultMsg);
+            $logoutSlogan = $this->getConf('logoutmsg');
+            print(sprintf($logoutSlogan, DOKU_BASE));
             exit;
         }
     }
@@ -171,7 +168,6 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
     * @return bool
     */
     public function getUserData($user, $htDefaultGroup = true) {
-        global $conf;
 
         if ($this->users === null) {
             $this->loadUserData();
@@ -245,7 +241,6 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
      * @return bool
      */
     public function createUser($user, $pwd, $name, $mail, $grps = null) {
-        global $conf;
 
         $lockfp = $this->lockWrite();
 
@@ -351,9 +346,7 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
      * @return array
      */
     private function defaultUserInfo($user) {
-        global $conf;
-
-        $defaultGroup = $conf['htaccess_defaultgrp'];
+        $defaultGroup = $this->getConf('defaultgrp');
 
         $name = $user;
         $mail = $user."@localhost";
@@ -435,9 +428,7 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
      * @return bool
      */
     private function findHtAccess() {
-        global $conf;
-
-        $htaccessFile = $conf['htaccess_file'];
+        $htaccessFile = $this->getConf('htaccess');
 
         if (empty($htaccessFile)) {
             $htaccess = realpath(dirname(__FILE__) . '/../../');
@@ -469,7 +460,7 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
 
             if ($var == "authuserfile") {
                 $this->htpasswd->init($value);
-                $htUserFile = $conf['htaccess_htuser'];
+                $htUserFile = $this->getConf('htuser');
                 if (empty($htUserFile)) {
                     $htUserFile="htuser";
                 }

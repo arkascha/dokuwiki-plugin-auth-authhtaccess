@@ -3,19 +3,29 @@ It is easy to set up since no external authority is involved and is suitable onl
 It is particularly useful where you want to share user/group information with other web applications that use a similar mechanism.
 
 ==== Configuration ====
-conf/dokuwiki.php options.
+typical conf/dokuwiki.php options:
 <code php>
+// Use this htaccess auth plugin.
 $conf['authtype'] = 'htaccess';
-$conf['htaccess_defaultgrp'] = 'guest'; //optional. All valid users will be members of this group.
 
-//Optional path to htaccess configuration. Blank or not included will autodiscover a ".htaccess" file like Apache does.
-//This is useful where you are not using BASIC authentication but still want to use these formats for user/password/group info.
-//$conf['htaccess_file'] = 'conf/htauth';
+// Optional path to htaccess configuration. Blank or not included will autodiscover a '.htaccess' style file like Apache does.
+// This is useful where you are not using Apache's basic auth mechanism but still want to use these formats for user/password/group info.
+$conf['plugin']['authhtaccess']['htaccess'] = '.htauth';
 
-$conf['htaccess_htuser'] = 'htuser'; //Name of htuser file. If no path specified will be in same directory as AuthUserFile.
-$conf['autopasswd'] = 1;  //set to zero if you want to specify passwords to users. 
-$conf['openregister']= 0; //open register won't work behind basic auth
-$conf['resendpasswd']= 0; //also won't work behind basic auth
+// Name of htuser file. If no path specified will be in same directory as AuthUserFile.
+$conf['plugin']['authhtaccess']['htuser'] = '.htuser'; 
+
+// An optional message displayed upon a successfull logout in case Apache's basic auth mechanism is used. 
+// Will automatically pull in dokuwiki's start URL in case a '%s' place holder is specified within.
+$conf['plugin']['authhtaccess']['logoutmsg'] = 'Successful logout. Retry login <a href="%s">here</a>.'
+
+// An optional group all valid users will be members of.
+$conf['plugin']['authhtaccess']['defaultgrp'] = 'guest'; 
+
+// Some general options worth mentioning here.
+$conf['autopasswd'] = 1;  // Set to zero if you want to specify passwords to users. 
+$conf['openregister'] = 0; // "open register" feature won't work behind Apache's basic auth mechanism. 
+$conf['resendpasswd'] = 0; // "resend password" feature won't work behind Apache's basic auth mechanism. 
 </code>
 
 A typical .htaccess file would live in the dokuwiki root directory or somewhere further up the path
@@ -35,7 +45,7 @@ require valid-user
 
 AuthUserFile must point to an existing (possibly empty) file.
 
-AuthGroupFile is optional, but omitting it will only make sense if you set $conf['htaccess_defaultgrp'] and set default acl to allow something on that group.
+AuthGroupFile is optional, but omitting it will only make sense if you set $conf['plugin']['htaccess']['defaultgrp'] and set default acl to allow something on that group.
 
 These files must be writable by your webserver user if you want to add new users, allow users to change passwords etc...
 
