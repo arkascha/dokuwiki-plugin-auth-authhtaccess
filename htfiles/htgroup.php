@@ -14,14 +14,15 @@ class auth_plugin_authhtaccess_htgroup extends auth_plugin_authhtaccess_htbase
 
     /**
      * auth_plugin_authhtaccess_htgroup constructor.
+     * @param auth_plugin_authhtaccess $authPlugin
      * @param string $file
      * @param null $defaultGroup
      */
-    public function __construct($file = '', $defaultGroup = null) {
+    public function __construct(auth_plugin_authhtaccess $authPlugin, $file = '', $defaultGroup = null) {
         if (isset($defaultGroup)) {
             $this->defaultGroup = trim($defaultGroup);
         }
-        parent::__construct($file);
+        parent::__construct($authPlugin, $file);
     }
 
     /**

@@ -62,9 +62,9 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
         parent::__construct();
         $defaultGroup = $this->getConf('defaultgrp');
 
-        $this->htpasswd = new auth_plugin_authhtaccess_htpasswd();
-        $this->htuser = new auth_plugin_authhtaccess_htuser();
-        $this->htgroup = new auth_plugin_authhtaccess_htgroup('', $defaultGroup);
+        $this->htpasswd = new auth_plugin_authhtaccess_htpasswd($this);
+        $this->htuser = new auth_plugin_authhtaccess_htuser($this);
+        $this->htgroup = new auth_plugin_authhtaccess_htgroup($this, '', $defaultGroup);
 
         if (!$this->findHtAccess()) {
             $this->success = false;
@@ -146,7 +146,8 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
             header('WWW-Authenticate: Basic realm="' . $this->realm . '"');
             header('HTTP/1.0 401 Unauthorized');
             $logoutSlogan = $this->getConf('logoutmsg');
-            print(sprintf($logoutSlogan, DOKU_BASE));
+            $logoutLocale = $this->getLang($logoutSlogan);
+            print(sprintf(($logoutLocale ? $logoutLocale : $logoutSlogan), DOKU_BASE));
             exit;
         }
     }
@@ -489,7 +490,7 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
     private function lockRead($lockFile) {
         $this->lockFile = $lockFile;
         $lockfp = fopen($lockFile, 'r');
-        flock($lockfp, LOCK_SH) || die("Can't get lock");
+        flock($lockfp, LOCK_SH) || die($this->getLang("Can't get file lock."));
         return $lockfp;
     }
 
@@ -498,7 +499,7 @@ class auth_plugin_authhtaccess extends DokuWiki_Auth_Plugin
      */
     private function lockWrite() {
         $lockfp = fopen($this->lockFile, 'r');
-        flock($lockfp, LOCK_EX) || die("Can't get lock");
+        flock($lockfp, LOCK_EX) || die("Can't get file lock.");
         return $lockfp;
     }
 

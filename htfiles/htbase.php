@@ -5,14 +5,19 @@
  */
 abstract class auth_plugin_authhtaccess_htbase
 {
+    /** @var auth_plugin_authhtaccess */
+    protected $authPlugin;
     /** @var string file name */
     private $htFile = '';
 
     /**
      * auth_plugin_authhtaccess_htbase constructor.
+     * @param plugin_authhtaccess $authPlugin
      * @param string $htFile
      */
-    public function __construct($htFile = '') {
+    public function __construct(auth_plugin_authhtaccess $authPlugin, $htFile = '') {
+        $this->authPlugin = $authPlugin;
+
         if(!empty($htFile)) {
             $this->init($htFile);
         }
@@ -26,7 +31,7 @@ abstract class auth_plugin_authhtaccess_htbase
         $this->htFile = $htFile;
 
         if(empty($htFile)) {
-            $this->error("Empty file passed to init", 1);
+            $this->error($this->getLang("Empty file passed to initialization."), 1);
         }
 
         if ($this->canRead()) {
@@ -56,12 +61,12 @@ abstract class auth_plugin_authhtaccess_htbase
         }
 
         if (!(is_readable($fileName))) {
-            $this->error("File [$fileName] not readable", 0);
+            $this->error(sprintf($this->getLang("File [%s] not readable."), $fileName), 0);
             return false;
         }
 
         if(is_dir($fileName)) {
-            $this->error("File [$fileName] is a directory", 0);
+            $this->error(sprintf($this->getLang("File [%s] is a directory."), $fileName), 0);
             return false;
         }
 
@@ -77,7 +82,7 @@ abstract class auth_plugin_authhtaccess_htbase
         }
 
         if(is_link($this->htFile)) {
-            $this->error("File [$this->htFile] is a symlink", 0);
+            $this->error(sprintf($this->getLang("File [%s] is a symlink."), $this->htFile), 0);
             return false;
         }
 

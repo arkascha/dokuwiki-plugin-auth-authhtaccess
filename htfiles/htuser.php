@@ -10,10 +10,11 @@ class auth_plugin_authhtaccess_htuser extends auth_plugin_authhtaccess_htbase
 
     /**
      * auth_plugin_authhtaccess_htuser constructor.
+     * @param auth_plugin_authhtaccess $authPlugin
      * @param string $file
      */
-    public function __construct($file = '') {
-        parent::__construct($file);
+    public function __construct(auth_plugin_authhtaccess $authPlugin, $file = '') {
+        parent::__construct($authPlugin, $file);
     }
 
     /**
@@ -48,12 +49,12 @@ class auth_plugin_authhtaccess_htuser extends auth_plugin_authhtaccess_htbase
      */
     public function addUser ($userId, $name, $mail, $writeFile = true) {
         if(empty($userId)) {
-            $this->error("add htUser fail. No UserID", 0);
+            $this->error($this->authPlugin->getLang("Adding user failed: no identifier specified."), 0);
             return false;
         }
 
         if($this->isUser($userId)) {
-            $this->error("add htUser fail. UserID already exists", 0);
+            $this->error($this->authPlugin->getLang("Adding user failed: identifier already exists."), 0);
             return false;
         }
 

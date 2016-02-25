@@ -10,10 +10,11 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
 
     /**
      * auth_plugin_authhtaccess_htpasswd constructor.
+     * @param auth_plugin_authhtaccess $authPlugin
      * @param string $file
      */
-    public function __construct($file = '') {
-        parent::__construct($file);
+    public function __construct(auth_plugin_authhtaccess $authPlugin, $file = '') {
+        parent::__construct($authPlugin, $file);
     }
 
     /**
@@ -70,7 +71,7 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
         }
 
         if(empty($newPass)) {
-            $this->error("changePass failure - no new password submitted", 0);
+            $this->error($this->authPlugin->getLang("Password change failure: no new password specified."), 0);
             return false;
         }
 
@@ -78,13 +79,13 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
         $checkPass = strtolower($newPass);
 
         if($checkName == $checkPass) {
-            $this->error("changePass failure: UserID and password cannot be the same", 0);
+            $this->error($this->authPlugin->getLang("Password change failure: identifier and password cannot be identical."), 0);
             return false;
         }
 
         if(!(empty($oldPass))) {
             if (!($this->verifyUser($userId,$oldPass))) {
-                $this->error("changePass failure for [$userId] : Authentication Failed", 0);
+                $this->error(sprintf($this->authPlugin->getLang("Password change failure: authentication for user [%s] failed."), $userId), 0);
                 return false;
             }
 
@@ -107,11 +108,11 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
      */
     public function renameUser ($oldId, $newId, $writeFile = true) {
         if (!$this->isUser($oldId)) {
-            $this->error("Cannot change userid, [$oldId] does not exist", 0);
+            $this->error(sprintf($this->authPlugin->getLang("Identifier change failed: identifier [%s] does not exist."), $oldId), 0);
         }
 
         if ($this->isUser($newId)) {
-            $this->error("Cannot change UserID, [$newId] already exists", 0);
+            $this->error(sprintf($this->authPlugin->getLang("Identifier change failed: identifier [%s] already exists."), $newId), 0);
             return false;
         }
 
@@ -134,16 +135,16 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
      */
     public function addUser ($userId, $newPass, $writeFile = true) {
         if (empty($userId)) {
-            $this->error("addUser fail. No UserID", 0);
+            $this->error($this->authPlugin->getLang("Adding user failed: no identifier specified."), 0);
             return false;
         }
         if (empty($newPass)) {
-            $this->error("addUser fail. No password", 0);
+            $this->error($this->authPlugin->getLang("Adding user failed: no password specified."), 0);
             return false;
         }
 
         if ($this->isUser($userId)) {
-            $this->error("addUser fail. UserID already exists", 0);
+            $this->error($this->authPlugin->getLang("Adding user failed: identifier already exists."), 0);
             return false;
         }
 
@@ -151,7 +152,7 @@ class auth_plugin_authhtaccess_htpasswd extends auth_plugin_authhtaccess_htbase
 
         if ($writeFile) {
             if(!($this->writeFile())) {
-                $this->error("FATAL could not add user due to file error! [$php_errormsg]", 1);
+                $this->error(sprintf($this->authPlugin->getLang("Adding user failed due to a file handling error! [%s]"), $php_errormsg), 1);
                 exit; // just in case
             }
         }
